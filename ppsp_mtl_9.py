@@ -2,14 +2,18 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class conv1d_block(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, padding="same", stride=1, dilation=1):
-        super().__init__()
-        self.c = nn.Conv1d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride,
-                           padding=padding, dilation=dilation)
-        self.bn = nn.BatchNorm1d(num_features=out_channels)
-        self.relu = nn.ReLU()
 
+# ============================================================
+# Your existing helper blocks (kept identical)
+# ============================================================
+class conv1d_block(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size=3,
+                 padding="same", stride=1, dilation=1):
+        super().__init__()
+        self.c = nn.Conv1d(in_channels, out_channels, kernel_size,
+                           stride=stride, padding=padding, dilation=dilation)
+        self.bn = nn.BatchNorm1d(out_channels)
+        self.relu = nn.ReLU()
     def forward(self, x):
         return self.relu(self.bn(self.c(x)))
 
@@ -17,10 +21,12 @@ class conv1d_block(nn.Module):
 def upsample(input, size=None):
     upsampling = 'linear'
     upsampler = nn.Upsample(scale_factor=size, mode=upsampling)
-    out = upsampler(input)
-    return out
+    return upsampler(input)
+
+
 def concat(prev_output, upsampled_features):
     return torch.cat([prev_output, upsampled_features], dim=1)
+
 
 class PPool(nn.Module):
     def __init__(self, in_channels, pool_size_lst=None):
@@ -43,9 +49,14 @@ class PPool(nn.Module):
         u3 = upsample(p3, interpolate_size // p3.size(2))
         return torch.cat([feat_map, u1, u2, u3], dim=1)
 
-class PPSP(nn.Module):
+
+# ============================================================
+# Your Original FPN_2 (unchanged, except one added line)
+# ============================================================
+
+class FPN_2(nn.Module):
     def __init__(self, in_channels=1, out_channels=32):
-        super(PPSP, self).__init__()
+        super(FPN_2, self).__init__()
         kernel_size, pad, out_channels = 3, 1, 32
         self.conv_block1 = conv1d_block(in_channels=in_channels, out_channels=32, kernel_size=3, stride=1, padding=1)
         self.conv_block2 = conv1d_block(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding=1)
@@ -163,12 +174,47 @@ class PPSP(nn.Module):
         output2 = self.conv_output2(p_pool_out)
 
         output3 = self.conv_output3(output2)
-        # final_output = self.sigmoid(output3)
+        final_output = self.sigmoid(output3)
 
-        return output3
+        return final_output
 
 
+# ============================================================
+# Integrated Fundamental Head inside Frozen FPN_2
+# ============================================================
+class FPN2_withFundamental(nn.Module):
+    def __init__(self, pretrained_fpn2, freeze=True, hidden=256):
+        super().__init__()
+        self.harm_net = pretrained_fpn2
+
+        if freeze:
+            for p in self.harm_net.parameters():
+                p.requires_grad = False
+            print("Frozen harmonic FPN_2 weights ")
+
+        # Dense fundamental head
+        self.fund_head = nn.Sequential(
+            nn.Linear(1024, hidden),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(hidden, 1024)
+        )
+
+    def forward(self, x):
+        # get harmonic output
+        with torch.no_grad():
+            harm_pred = self.harm_net(x)  # (B,1,1024)
+        # feed to fundamental head
+        h = harm_pred.squeeze(1)          # (B,1024)
+        fund_pred = self.fund_head(h).unsqueeze(1)  # (B,1,1024)
+        return fund_pred, harm_pred
+
+# fpn_weights_file= "best_model_weights_fan5_fan3_bldc_fpn2"
+# harm_model = FPN_2(in_channels=1)
+# harm_model.load_state_dict(torch.load(f'../data/train_test_data/{fpn_weights_file}', map_location="cpu"))
+#
 # x=torch.randn(1, 1, 1024)
-# model = PPSP(in_channels=1, out_channels=32)
+# # Wrap it with integrated head
+# model = FPN2_withFundamental(harm_model, freeze=True, hidden=256)
 # out1,out2 = model(x)
 # print()
