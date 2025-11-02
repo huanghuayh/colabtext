@@ -1,9 +1,10 @@
 def run():
     import torch
+    import numpy as np
     import models.fpn_2 as fpn2
     print('main')
     model = fpn2.PPSP()
-    print(torch.cuda.is_available())
+    print(torch.cuda.is_available(), np.__version__)
     # print(model)
 
     # #### load dataset
