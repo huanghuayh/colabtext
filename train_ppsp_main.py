@@ -3,7 +3,8 @@ def run():
     import models.fpn_2 as fpn2
     print('main')
     model = fpn2.PPSP()
-    print(model)
+    print(torch.cuda.is_available())
+    # print(model)
 
     # #### load dataset
     # import os, pickle
