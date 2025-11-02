@@ -6,7 +6,8 @@ def run():
     model = fpn2.PPSP()
     print(torch.cuda.is_available(), np.__version__)
     # print(model)
-
+    with open("rahul_test.txt", "w") as f:
+        f.write("my name is Rahul\n")
     # #### load dataset
     # import os, pickle
     #
