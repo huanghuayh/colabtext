@@ -1,4 +1,5 @@
 def run():
+    import torch
     import models.fpn_2 as fpn2
     print('main')
     model = fpn2.PPSP()
