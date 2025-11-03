@@ -1,7 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from fpn_2 import PPSP
 
 class PPSP_withFundamental(nn.Module):
     def __init__(self, pretrained_ppsp, freeze=True, hidden=256):

@@ -1,10 +1,13 @@
+
+
 def run():
     import torch
     import numpy as np
     import os, pickle
     import models.fpn_2 as fpn2
     import models.loss_functions as loss_funcs
-
+    import helper_functions as helper_funcs
+    from models.ppsp_1up_head import PPSP_withFundamental
     import matplotlib
     # matplotlib.use('QT5Agg')
     import matplotlib.pyplot as plt
@@ -29,6 +32,7 @@ def run():
     load model and train
     """
     psd_length = 1024
+    block_width = 3
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
@@ -63,8 +67,10 @@ def run():
         # criterion = nn.BCEWithLogitsLoss()
         # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
+        # criterion = loss_funcs.OverlapDiceLoss()
+        # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
 
-        criterion = loss_funcs.OverlapDiceLoss()
+        criterion = loss_funcs.BCEDiceLoss(w_dice=0.5, pos_weight=8.0, device=device)
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
 
         if train_model_flag:
@@ -82,14 +88,19 @@ def run():
                 train_loss = 0.0
 
                 for batch_x, batch_y in train_loader:
+                    model1_targets, model2_targets = helper_funcs.remake_targets(batch_y, mode=mode,
+                                                                                 total_num_outputs=6, device=device,
+                                                                                 psd_length=1024,
+                                                                                 block_width=block_width)
+                    ### helper_funcs.plot_region_masks(model1_targets, model2_targets)
 
                     batch_x = batch_x.to(device)
-                    batch_y = batch_y.to(device)
+                    # batch_y = batch_y.to(device)
 
                     optimizer.zero_grad()
                     outputs = model(batch_x)
 
-                    loss_fundamental = criterion(outputs.squeeze(1), batch_y)
+                    loss_fundamental = criterion(outputs[0].squeeze(1), model1_targets[:,0,:])
                     loss = loss_fundamental
 
                     loss.backward()
@@ -106,13 +117,17 @@ def run():
 
                 with torch.no_grad():
                     for batch_x, batch_y in val_loader:
-                        batch_x = batch_x.to(device)  # [batch_size, 1, 2, 512]
-                        batch_y = batch_y.to(device)  # [batch_size, 512]
+                        model1_targets, model2_targets = helper_funcs.remake_targets(batch_y, mode=mode,
+                                                                                     total_num_outputs=6, device=device,
+                                                                                     psd_length=1024,
+                                                                                     block_width=block_width)
+                        batch_x = batch_x.to(device)
+                        # batch_y = batch_y.to(device)
 
                         outputs = model(batch_x)  # [batch_size, 1, 1, 512]
 
                         ### loss function for model mtl1
-                        loss_fundamental = criterion(outputs.squeeze(1), batch_y)
+                        loss_fundamental = criterion(outputs[0].squeeze(1), model1_targets[:,0,:])
                         loss = loss_fundamental
 
                         val_loss += loss.item() * batch_x.size(0)
@@ -126,8 +141,8 @@ def run():
                     best_model_weights = model.state_dict().copy()
                     torch.save(best_model_weights, f'./{model_name}')
 
-                if (epoch + 1) % 1 == 0:
-                    print("="*25)
+                if (epoch + 1) % 30 == 0:
+                    print("=" * 25)
                     print(f'Epoch [{epoch + 1}/{num_epochs}], '
                           f'Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, '
                           f'Best Val: {best_val_loss:.4f}')
@@ -151,10 +166,16 @@ def run():
         return model
 
     for ind, (X_train, X_val, y_train, y_val, dist_train, dist_val) in enumerate(aggregated_combs_data_lst):
-        if ind in [0,1]:
+        if ind in [0, 1]:
             print(f"Training model: best_fpn1d_model_{mode}_{all_combs_lists[ind]}.pth")
 
             ppsp_model = fpn2.PPSP(in_channels=1)
+            ### load ppsp weights to freeze
+            fpn_weights_file="ppsp_weights.pth"
+            ppsp_model.load_state_dict(torch.load(f'./model_weights/{fpn_weights_file}', map_location=device))
+
+            ### define the ppsp_1up head
+            ppsp_1up = PPSP_withFundamental(pretrained_ppsp=ppsp_model,freeze=True,hidden=256)
 
             ### Train the model
             trained_model = train_fpn2d_model(
@@ -162,10 +183,11 @@ def run():
                 num_epochs=150,
                 batch_size=100,
                 learning_rate=0.001,
-                model=ppsp_model,
+                model=ppsp_1up,
                 model_name=f"best_fpn2_1up_model_{mode}_{all_combs_lists[ind]}.pth",
                 train_model_flag=True
             )
+
 
 if __name__ == '__main__':
     run()
