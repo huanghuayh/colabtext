@@ -16,8 +16,10 @@ def run():
 
     print('main')
     print(f"cuda available {torch.cuda.is_available()}")
-
-    #### load dataset
+    print("="*25)
+    """
+     load dataset
+    """
     mode = 'block'
 
     with open(f"./conv2d_psd_scaled_down_1up_{mode}_1.pkl", "rb") as f:
