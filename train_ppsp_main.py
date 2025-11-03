@@ -163,9 +163,9 @@ def run():
 
             ### Train the model
             trained_model = train_fpn2d_model(
-                X_train, y_train, X_val, y_val,
-                num_epochs=100,
-                batch_size=100,
+                X_train[:20,:,:], y_train[:20,:], X_val[:20,:,:], y_val[:20,:],
+                num_epochs=10,
+                batch_size=10,
                 learning_rate=0.001,
                 model=ppsp_model,
                 model_name=f"best_fpn2_1up_model_{mode}_{all_combs_lists[ind]}.pth",
