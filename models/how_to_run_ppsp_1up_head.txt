@@ -1,0 +1,6 @@
+1) train_ppsp1up_main.py -> trains the model
+2) test_model_weights.ipynb -> """testing only ppsp_1up head""" cell helps to test model
+3) train size 12445; valid size 883 (raw dataset)
+4) block style target data
+5) ppsp_backbone: fpn2; 1up_head: ppsp_1up_head.py
+6) model_weights: backbone weights: ppsp_weights.pth; 1up_head weights: ppsp1up_head_[0].pth, ppsp1up_head_[3].pth
