@@ -1,23 +1,20 @@
 def run():
     import torch
     import numpy as np
-
+    import os, pickle
     import models.fpn_2 as fpn2
     import models.loss_functions as loss_funcs
 
     import matplotlib
     # matplotlib.use('QT5Agg')
     import matplotlib.pyplot as plt
-    import torch
     from torch.utils.data import DataLoader, TensorDataset
     import torch.nn as nn
 
     print('main')
-    print(torch.cuda.is_available(), np.__version__)
+    print(f"cuda available {torch.cuda.is_available()}")
 
     #### load dataset
-    import os, pickle
-
     mode = 'block'
 
     with open(f"./conv2d_psd_scaled_down_1up_{mode}_1.pkl", "rb") as f:
@@ -32,10 +29,7 @@ def run():
     load model and train
     """
     psd_length = 1024
-
-
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
     print(f"Using device: {device}")
 
     ### Training function
@@ -43,7 +37,7 @@ def run():
                           model=None,
                           model_name="", train_model_flag=False):
         """
-        Train FPN_2D model with format: [batch_size, 1, channels, 512]
+        Train FPN_2D model with format: [batch_size, 1, channels, length]
         """
         ### Convert to tensors
         X_train_tensor = torch.FloatTensor(X_train)
@@ -133,6 +127,7 @@ def run():
                     torch.save(best_model_weights, f'./{model_name}')
 
                 if (epoch + 1) % 1 == 0:
+                    print("="*25)
                     print(f'Epoch [{epoch + 1}/{num_epochs}], '
                           f'Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, '
                           f'Best Val: {best_val_loss:.4f}')
@@ -163,9 +158,9 @@ def run():
 
             ### Train the model
             trained_model = train_fpn2d_model(
-                X_train[:20,:,:], y_train[:20,:], X_val[:20,:,:], y_val[:20,:],
-                num_epochs=10,
-                batch_size=10,
+                X_train, y_train, X_val, y_val,
+                num_epochs=150,
+                batch_size=100,
                 learning_rate=0.001,
                 model=ppsp_model,
                 model_name=f"best_fpn2_1up_model_{mode}_{all_combs_lists[ind]}.pth",
