@@ -6,7 +6,7 @@ def run():
     import models.loss_functions as loss_funcs
 
     import matplotlib
-    matplotlib.use('QT5Agg')
+    # matplotlib.use('QT5Agg')
     import matplotlib.pyplot as plt
     import torch
     from torch.utils.data import DataLoader, TensorDataset
