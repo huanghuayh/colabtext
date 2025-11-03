@@ -70,7 +70,8 @@ class PPSP(nn.Module):
 
         self.conv_output1 = conv1d_block(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding=1)
         self.conv_output2 = conv1d_block(in_channels=35, out_channels=2, kernel_size=3, stride=1, padding=1)
-        self.conv_output3 = conv1d_block(in_channels=2, out_channels=1, kernel_size=1, stride=1)
+        # self.conv_output3 = conv1d_block(in_channels=2, out_channels=1, kernel_size=1, stride=1)
+        self.conv_output3 = nn.Conv1d(in_channels=2, out_channels=1, kernel_size=1)
 
         self.sigmoid = nn.Sigmoid()
 
