@@ -206,9 +206,6 @@ def run(DATA_DIR=".", OUTPUT_DIR="."):
             )
 
 
-
-
-
 if __name__ == "__main__":
     import sys
     DATA_DIR = "."
