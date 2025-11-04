@@ -31,7 +31,7 @@ def run(DATA_DIR=".", OUTPUT_DIR="."):
 
     # with open(f"./conv2d_psd_scaled_down_1up_{mode}_1.pkl", "rb") as f:
     #     aggregated_combs_data_lst = pickle.load(f)
-    data_path = os.path.join(DATA_DIR, f"conv2d_psd_scaled_down_1up_{mode}_1.pkl")
+    data_path = os.path.join(DATA_DIR, f"conv2d_psd_scaled_sfnds_1up_{mode}_1.pkl")
     print("Loading dataset from:", data_path)
     with open(data_path, "rb") as f:
         aggregated_combs_data_lst = pickle.load(f)
