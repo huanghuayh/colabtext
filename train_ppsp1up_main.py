@@ -6,7 +6,7 @@ both ppsp and 1up head are trained together
 4) Loss = alpha(fundamental_loss) + ((1-alpha)(harmonic_loss))
 """
 
-def run():
+def run(DATA_DIR=".", OUTPUT_DIR="."):
     import torch
     import numpy as np
     import os, pickle
@@ -29,7 +29,11 @@ def run():
     """
     mode = 'block'
 
-    with open(f"./conv2d_psd_scaled_down_1up_{mode}_1.pkl", "rb") as f:
+    # with open(f"./conv2d_psd_scaled_down_1up_{mode}_1.pkl", "rb") as f:
+    #     aggregated_combs_data_lst = pickle.load(f)
+    data_path = os.path.join(DATA_DIR, f"conv2d_psd_scaled_down_1up_{mode}_1.pkl")
+    print("Loading dataset from:", data_path)
+    with open(data_path, "rb") as f:
         aggregated_combs_data_lst = pickle.load(f)
 
     all_combs_lists = [[0], [3], [0, 1, 2, 3]]
@@ -150,7 +154,9 @@ def run():
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
                     best_model_weights = model.state_dict().copy()
-                    torch.save(best_model_weights, f'./{model_name}')
+                    # torch.save(best_model_weights, f'./{model_name}')
+                    save_path = os.path.join(OUTPUT_DIR, model_name)
+                    torch.save(best_model_weights, save_path)
 
                 if (epoch + 1) % 30 == 0:
                     print("=" * 25)
@@ -169,8 +175,11 @@ def run():
             plt.legend()
             plt.grid(True)
 
-            plt.savefig(f'./training_history_{cur_combination}.png', dpi=300,
-                        bbox_inches='tight')
+            # plt.savefig(f'./training_history_{cur_combination}.png', dpi=300,
+            #             bbox_inches='tight')
+            # plt.close()
+            plot_path = os.path.join(OUTPUT_DIR, f'training_history_{cur_combination}.png')
+            plt.savefig(plot_path, dpi=300, bbox_inches='tight')
             plt.close()
             # plt.show()
 
@@ -197,5 +206,23 @@ def run():
             )
 
 
-if __name__ == '__main__':
-    run()
+
+
+
+if __name__ == "__main__":
+    import sys
+    DATA_DIR = "."
+    OUTPUT_DIR = "."
+
+    if len(sys.argv) >= 3:
+        DATA_DIR = sys.argv[1]
+        OUTPUT_DIR = sys.argv[2]
+        print(f"Using paths from command line arguments")
+    else:
+        print(f"No arguments given — using defaults (current directory).")
+
+    print(f"DATA_DIR: {DATA_DIR}")
+    print(f"OUTPUT_DIR: {OUTPUT_DIR}")
+
+    run(DATA_DIR, OUTPUT_DIR)
+
