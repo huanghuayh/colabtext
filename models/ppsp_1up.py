@@ -5,10 +5,11 @@ both ppsp and 1up head are trained together
 3) create new head similar to ppsp_1up_head that is (trainable)
 """
 import torch.nn as nn
-# from helpers import scale_psd
 import torch
 from scipy import signal
 import numpy as np
+
+
 def scale_psd(orig_psd_db, final_length_psd, scale_factor, method="average"):
     if scale_factor is None or scale_factor == 1:
         return orig_psd_db[:final_length_psd]
@@ -64,7 +65,7 @@ class PPSP_1up(nn.Module):
         self.ppsp_backbone = ppsp_backbone
 
         self.fund_head = nn.Sequential(
-            nn.Linear(1877, hidden_nodes),
+            nn.Linear(1365, hidden_nodes),
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(hidden_nodes, 1024)
@@ -80,7 +81,13 @@ class PPSP_1up(nn.Module):
             for scale_factor in [1,2,3]:
                 cur_scaled = scale_psd(harmonics_pred[ind],int(len(harmonics_pred[ind])//scale_factor),scale_factor,method="average")
                 cur_scaled_lst.append(cur_scaled)
-            flatten = torch.cat(cur_scaled_lst)
+
+            # flatten = torch.cat(cur_scaled_lst)
+            ## summation
+            min_len = min(t.numel() for t in cur_scaled_lst)
+            summed = sum(t[:min_len] for t in cur_scaled_lst)
+            flatten = torch.cat([harmonics_pred[ind], summed], dim=0)
+
             remade_harmonics_pred.append(flatten)
         remade_harmonics_pred = torch.stack(remade_harmonics_pred)
 
