@@ -1,4 +1,5 @@
 from scipy import signal
+import numpy as np
 def scale_psd(orig_psd_db, final_length_psd, scale_factor, method="average"):
     if scale_factor is None or scale_factor == 1:
         return orig_psd_db[:final_length_psd]
