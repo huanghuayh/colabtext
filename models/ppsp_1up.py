@@ -58,13 +58,32 @@ def scale_psd(orig_psd_db, final_length_psd, scale_factor, method="average"):
 
     return cur_psd[:final_length_psd]
 
+class CoordConv1d(nn.Module):
+    def __init__(self, in_ch, out_ch, kernel_size=3, padding='same'):
+        super().__init__()
+        self.conv = nn.Conv1d(in_ch + 1, out_ch, kernel_size, padding=padding)
+
+    def forward(self, x):
+        B, C, L = x.shape
+        pos = torch.arange(L, device=x.device, dtype=x.dtype) / (L - 1)
+        pos = pos.view(1, 1, L).expand(B, -1, -1)
+        x = torch.cat([x, pos], dim=1)
+        return self.conv(x)
+
 class PPSP_1up(nn.Module):
-    def __init__(self, ppsp_backbone, hidden_nodes=256):
+    def __init__(self, ppsp_backbone, hidden_nodes=256, hidden_channels=32):
         super(PPSP_1up, self).__init__()
 
         self.ppsp_backbone = ppsp_backbone
         self.scale_fuse = nn.Conv1d(3, 1, 1)
+
         self.fund_head = nn.Sequential(
+            CoordConv1d(1, hidden_channels, kernel_size=7, padding='same'),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Conv1d(hidden_channels, 1, kernel_size=3, padding='same')
+        )
+        self.linear_fund_head = nn.Sequential(
             nn.Linear(1024, hidden_nodes),
             nn.ReLU(),
             nn.Dropout(0.3),
@@ -73,28 +92,30 @@ class PPSP_1up(nn.Module):
 
     def forward(self, x):
         x = self.ppsp_backbone(x)
-        harmonics_pred = x.squeeze(1)
+        harmonics_pred = x
 
-        remade_harmonics_pred = []
-        for ind in range(harmonics_pred.shape[0]):
-            cur_scaled_lst=[]
-            for sf in [1, 2, 3]:
-                cur_scaled = scale_psd(harmonics_pred[ind],
-                                int(len(harmonics_pred[ind]) // sf),
-                                sf, method="average")
-                # cur_scaled = torch.from_numpy(cur_scaled).float().to(x.device)
-                cur_scaled = torch.nn.functional.interpolate(cur_scaled.unsqueeze(0).unsqueeze(0),
-                                                      size=harmonics_pred.shape[-1],
-                                                      mode="linear", align_corners=False).squeeze()
-                cur_scaled_lst.append(cur_scaled)
+        # remade_harmonics_pred = []
+        # for ind in range(harmonics_pred.shape[0]):
+        #     cur_scaled_lst=[]
+        #     for sf in [1, 2, 3]:
+        #         cur_scaled = scale_psd(harmonics_pred[ind],
+        #                         int(len(harmonics_pred[ind]) // sf),
+        #                         sf, method="average")
+        #         # cur_scaled = torch.from_numpy(cur_scaled).float().to(x.device)
+        #         cur_scaled = torch.nn.functional.interpolate(cur_scaled.unsqueeze(0).unsqueeze(0),
+        #                                               size=harmonics_pred.shape[-1],
+        #                                               mode="linear", align_corners=False).squeeze()
+        #         cur_scaled_lst.append(cur_scaled)
+        #
+        #     # flatten = torch.cat(cur_scaled_lst)
+        #     stacked = torch.stack(cur_scaled_lst, dim=0).unsqueeze(0)
+        #     fused = self.scale_fuse(stacked).squeeze()
+        #     remade_harmonics_pred.append(fused)
+        #
+        # remade_harmonics_pred = torch.stack(remade_harmonics_pred)
 
-            # flatten = torch.cat(cur_scaled_lst)
-            stacked = torch.stack(cur_scaled_lst, dim=0).unsqueeze(0)
-            fused = self.scale_fuse(stacked).squeeze()
-            remade_harmonics_pred.append(fused)
-        remade_harmonics_pred = torch.stack(remade_harmonics_pred)
 
-        fundamental_pred = self.fund_head(remade_harmonics_pred).unsqueeze(1)
+        fundamental_pred = self.fund_head(harmonics_pred)
 
         return fundamental_pred, harmonics_pred
 
