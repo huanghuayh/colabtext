@@ -120,11 +120,11 @@ class PPSP_1up(nn.Module):
         return fundamental_pred, harmonics_pred
 
 
-# import fpn_2
-# import torch
-#
-# x= torch.randn(10, 1, 1024)
-# PPSP_net = fpn_2.PPSP(in_channels=1, out_channels=32)
-# model_ppsp_1up = PPSP_1up(PPSP_net, hidden_nodes=256)
-# fund_pred,harmonic_pred =model_ppsp_1up(x)
-# print()
+import fpn_2
+import torch
+
+x= torch.randn(10, 1, 1024)
+PPSP_net = fpn_2.PPSP(in_channels=1, out_channels=32)
+model_ppsp_1up = PPSP_1up(PPSP_net, hidden_nodes=256)
+fund_pred,harmonic_pred =model_ppsp_1up(x)
+print()
