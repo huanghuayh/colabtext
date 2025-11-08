@@ -22,58 +22,26 @@ def upsample(input, size=None):
 def concat(prev_output, upsampled_features):
     return torch.cat([prev_output, upsampled_features], dim=1)
 
-# class PPool(nn.Module):
-#     def __init__(self, in_channels, pool_size_lst=None):
-#         super(PPool, self).__init__()
-#         if pool_size_lst is None:
-#             pool_size_lst = [1, 2, 4]
-#         self.pool_size = pool_size_lst
-#         self.pool1 = nn.AdaptiveAvgPool1d(self.pool_size[0])
-#         self.pool2 = nn.AdaptiveAvgPool1d(self.pool_size[1])
-#         self.pool3 = nn.AdaptiveAvgPool1d(self.pool_size[2])
-#         self.conv = nn.Conv1d(in_channels, 1, kernel_size=1)
-#
-#     def forward(self, feat_map):
-#         interpolate_size = feat_map.size(-1)
-#         p1 = self.conv(self.pool1(feat_map))
-#         p2 = self.conv(self.pool2(feat_map))
-#         p3 = self.conv(self.pool3(feat_map))
-#         u1 = upsample(p1, interpolate_size)
-#         u2 = upsample(p2, interpolate_size // p2.size(2))
-#         u3 = upsample(p3, interpolate_size // p3.size(2))
-#         return torch.cat([feat_map, u1, u2, u3], dim=1)
-
 class PPool(nn.Module):
     def __init__(self, in_channels, pool_size_lst=None):
         super(PPool, self).__init__()
-
         if pool_size_lst is None:
-            pool_size_lst = [1, 8, 32]
+            pool_size_lst = [1, 2, 4]
         self.pool_size = pool_size_lst
-        # Define the adaptive pooling layers
         self.pool1 = nn.AdaptiveAvgPool1d(self.pool_size[0])
         self.pool2 = nn.AdaptiveAvgPool1d(self.pool_size[1])
         self.pool3 = nn.AdaptiveAvgPool1d(self.pool_size[2])
-
-        # Shared 1x1 conv for dimensionality reduction
         self.conv = nn.Conv1d(in_channels, 1, kernel_size=1)
 
     def forward(self, feat_map):
         interpolate_size = feat_map.size(-1)
-
-        # Apply pyramid pooling
-        p1 = self.conv(self.pool1(feat_map))  # global
-        p2 = self.conv(self.pool2(feat_map))  # medium
-        p3 = self.conv(self.pool3(feat_map))  # local
-
-        # Upsample back to full resolution
-        u1 = F.interpolate(p1, size=interpolate_size, mode="linear", align_corners=False)
-        u2 = F.interpolate(p2, size=interpolate_size, mode="linear", align_corners=False)
-        u3 = F.interpolate(p3, size=interpolate_size, mode="linear", align_corners=False)
-
-        # Concatenate all features
+        p1 = self.conv(self.pool1(feat_map))
+        p2 = self.conv(self.pool2(feat_map))
+        p3 = self.conv(self.pool3(feat_map))
+        u1 = upsample(p1, interpolate_size)
+        u2 = upsample(p2, interpolate_size // p2.size(2))
+        u3 = upsample(p3, interpolate_size // p3.size(2))
         return torch.cat([feat_map, u1, u2, u3], dim=1)
-
 
 class PPSP(nn.Module):
     def __init__(self, in_channels=1, out_channels=32):
