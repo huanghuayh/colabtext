@@ -4,7 +4,7 @@ import numpy as np
 
 data_root_pth="./conv2d_data/pred_plots/[3]/"
 
-files_lst= ["bldc_2_results_new","bldc_5_results_new","bldc_6_results_new"]
+files_lst= ["bldc_2_results","bldc_5_results","bldc_6_results"]
 final_lst=[]
 for fil_name in files_lst:
     file_pth = f"{data_root_pth}{fil_name}"
@@ -19,7 +19,8 @@ for fil_name in files_lst:
             predicted = val[4]
             gtruth = val[3]
 
-            if np.abs(predicted - gtruth) < 2.5:
+            # if np.abs(predicted - gtruth) < 2.5:
+            if np.abs(predicted - gtruth) < 50:
                 # --- Extract distance string with 'cm' (e.g., '50cm') ---
                 try:
                     parts = file_name.split("_")
